@@ -1,0 +1,112 @@
+package hospitality;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.event.*;
+
+public class dashboard extends JFrame implements ActionListener {
+
+
+private JPanel sidebar, contentPanel;
+private JButton btnStaff, btnRoom, btnService, btnReservation, btnInvoice, btnGuest, btnLogout;
+
+public dashboard() {
+    setTitle("Hospitality Management Dashboard");
+    setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    setSize(1000, 600);
+    setLocationRelativeTo(null);
+    setLayout(new BorderLayout());
+
+    // Sidebar (Left)
+    sidebar = new JPanel();
+    sidebar.setBackground(new Color(85, 130, 65)); // green shade
+    sidebar.setLayout(new GridLayout(8, 1, 0, 10));
+    sidebar.setBorder(BorderFactory.createEmptyBorder(20, 10, 20, 10));
+
+    btnStaff = createSidebarButton("Staff");
+    btnRoom = createSidebarButton("Rooms");
+    btnService = createSidebarButton("Services");
+    btnReservation = createSidebarButton("Reservations");
+    btnInvoice = createSidebarButton("Invoices");
+    btnGuest = createSidebarButton("Guests");
+    btnLogout = createSidebarButton("Logout");
+    btnLogout.setBackground(new Color(200, 70, 60));
+
+    sidebar.add(btnStaff);
+    sidebar.add(btnRoom);
+    sidebar.add(btnService);
+    sidebar.add(btnReservation);
+    sidebar.add(btnInvoice);
+    sidebar.add(btnGuest);
+    sidebar.add(new JLabel("")); // spacer
+    sidebar.add(btnLogout);
+
+    add(sidebar, BorderLayout.WEST);
+
+    // Content Panel (Right)
+    contentPanel = new JPanel(new BorderLayout());
+    JLabel welcomeLabel = new JLabel("Welcome to the Dashboard", SwingConstants.CENTER);
+    welcomeLabel.setFont(new Font("Segoe UI", Font.BOLD, 22));
+    contentPanel.add(welcomeLabel, BorderLayout.CENTER);
+    add(contentPanel, BorderLayout.CENTER);
+
+    // Event listeners
+    btnStaff.addActionListener(this);
+    btnRoom.addActionListener(this);
+    btnService.addActionListener(this);
+    btnReservation.addActionListener(this);
+    btnInvoice.addActionListener(this);
+    btnGuest.addActionListener(this);
+    btnLogout.addActionListener(this);
+
+    setVisible(true);
+}
+
+private JButton createSidebarButton(String text) {
+    JButton btn = new JButton(text);
+    btn.setFont(new Font("Segoe UI", Font.PLAIN, 16));
+    btn.setBackground(new Color(120, 170, 90));
+    btn.setForeground(Color.WHITE);
+    btn.setFocusPainted(false);
+    btn.setBorder(BorderFactory.createEmptyBorder(10, 20, 10, 20));
+    return btn;
+}
+
+public void actionPerformed(ActionEvent e) {
+    Object src = e.getSource();
+
+    if (src == btnStaff) {
+        showPanel(new StaffPanel());
+    } else if (src == btnRoom) {
+        showPanel(new RoomPanel());
+    } else if (src == btnService) {
+        showPanel(new ServicePanel());
+    } else if (src == btnReservation) {
+        showPanel(new ReservationPanel());
+    } else if (src == btnInvoice) {
+        showPanel(new InvoicePanel());
+    } else if (src == btnGuest) {
+        showPanel(new GuestPanel());
+    } else if (src == btnLogout) {
+        int confirm = JOptionPane.showConfirmDialog(this, "Are you sure you want to log out?", "Confirm Logout", JOptionPane.YES_NO_OPTION);
+        if (confirm == JOptionPane.YES_OPTION) {
+            dispose();
+            new LoginForm();
+        }
+    }
+}
+
+private void showPanel(JPanel panel) {
+    contentPanel.removeAll();
+    contentPanel.add(panel, BorderLayout.CENTER);
+    contentPanel.revalidate();
+    contentPanel.repaint();
+}
+
+public static void main(String[] args) {
+    new dashboard();
+}
+
+
+}
+
