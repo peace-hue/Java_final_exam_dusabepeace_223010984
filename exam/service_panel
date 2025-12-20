@@ -1,1 +1,179 @@
+package hospitality;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.event.*;
+import java.sql.*;
+
+public class ServicePanel extends JPanel implements ActionListener {
+
+   
+    private JTextField idTxt = new JTextField();
+    private JTextField nameTxt = new JTextField();
+    private JTextField priceTxt = new JTextField();
+    private JTextArea descTxt = new JTextArea();
+
+   
+    private JButton addBtn = new JButton("ADD SERVICE");
+    private JButton loadBtn = new JButton("LOAD SERVICES");
+    private JButton updateBtn = new JButton("UPDATE SERVICE");
+    private JButton deleteBtn = new JButton("REMOVE SERVICE");
+    private JButton selectBtn = new JButton("SELECT SERVICE BY ID");
+
+    
+    private JTable table;
+    private DefaultTableModel model;
+
+    public ServicePanel() {
+        setLayout(null);
+
+        
+        String[] columns = {"Service ID", "Service Name", "Description", "Price"};
+        model = new DefaultTableModel(columns, 0);
+        table = new JTable(model);
+        JScrollPane sp = new JScrollPane(table);
+        sp.setBounds(20, 300, 740, 200);
+        add(sp);
+
+        
+        descTxt.setLineWrap(true);
+        descTxt.setWrapStyleWord(true);
+
+        
+        int y = 20;
+        addField("Service ID", idTxt, y); 
+        y += 40;
+        addField("Service Name", nameTxt, y); 
+        y += 40;
+        addField("Description", descTxt, y); 
+        y += 90;
+        addField("Price", priceTxt, y); 
+        y += 20;
+
+        
+        addButtons();
+    }
+
+    
+    private void addField(String label, JComponent field, int y) {
+        JLabel lbl = new JLabel(label);
+        lbl.setBounds(20, y, 120, 25);
+        add(lbl);
+
+        if (field instanceof JTextArea) {
+            JScrollPane scroll = new JScrollPane(field);
+            scroll.setBounds(150, y, 200, 60);
+            add(scroll);
+        } else {
+            field.setBounds(150, y, 200, 25);
+            add(field);
+        }
+    }
+
+   
+    private void addButtons() {
+        addBtn.setBounds(400, 20, 170, 30);
+        updateBtn.setBounds(400, 60, 170, 30);
+        deleteBtn.setBounds(400, 100, 170, 30);
+        loadBtn.setBounds(400, 140, 170, 30);
+        selectBtn.setBounds(20, 260, 300, 25);
+
+        add(addBtn);
+        add(updateBtn);
+        add(deleteBtn);
+        add(loadBtn);
+        add(selectBtn);
+
+        addBtn.addActionListener(this);
+        updateBtn.addActionListener(this);
+        deleteBtn.addActionListener(this);
+        loadBtn.addActionListener(this);
+        selectBtn.addActionListener(this);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        try (Connection con = database_connection.getConnection()) {
+            if (con == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed!");
+                return;
+            }
+
+            if (e.getSource() == addBtn) {
+                String sql = "INSERT INTO service(service_id, service_name, description, price) VALUES(?,?,?,?)";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, Integer.parseInt(idTxt.getText()));
+                    ps.setString(2, nameTxt.getText());
+                    ps.setString(3, descTxt.getText());
+                    ps.setBigDecimal(4, new java.math.BigDecimal(priceTxt.getText()));
+                    ps.executeUpdate();
+                    JOptionPane.showMessageDialog(this, "Service added successfully!");
+                }
+
+            } else if (e.getSource() == updateBtn) {
+                String sql = "UPDATE service SET service_name=?, description=?, price=? WHERE service_id=?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setString(1, nameTxt.getText());
+                    ps.setString(2, descTxt.getText());
+                    ps.setBigDecimal(3, new java.math.BigDecimal(priceTxt.getText()));
+                    ps.setInt(4, Integer.parseInt(idTxt.getText()));
+                    ps.executeUpdate();
+                    JOptionPane.showMessageDialog(this, "Service updated successfully!");
+                }
+
+            } else if (e.getSource() == deleteBtn) {
+                String sql = "DELETE FROM service WHERE service_id=?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, Integer.parseInt(idTxt.getText()));
+                    ps.executeUpdate();
+                    JOptionPane.showMessageDialog(this, "Service deleted successfully!");
+                }
+
+            } else if (e.getSource() == loadBtn) {
+                model.setRowCount(0);
+                String sql = "SELECT * FROM service";
+                try (ResultSet rs = con.createStatement().executeQuery(sql)) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                            rs.getInt("service_id"),
+                            rs.getString("service_name"),
+                            rs.getString("description"),
+                            rs.getBigDecimal("price")
+                        });
+                    }
+                }
+
+            } else if (e.getSource() == selectBtn) {
+                model.setRowCount(0);
+                String sql = "SELECT * FROM service WHERE service_id=?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, Integer.parseInt(idTxt.getText()));
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            model.addRow(new Object[]{
+                                rs.getInt("service_id"),
+                                rs.getString("service_name"),
+                                rs.getString("description"),
+                                rs.getBigDecimal("price")
+                            });
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+        }
+    }
+
+   
+    public static void main(String[] args) {
+        JFrame f = new JFrame("Service Management");
+        f.setSize(800, 550);
+        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        f.add(new ServicePanel());
+        f.setVisible(true);
+    }
+}
 
