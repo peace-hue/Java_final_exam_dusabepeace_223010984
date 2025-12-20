@@ -1,1 +1,160 @@
+package hospitality;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.event.*;
+import java.sql.*;
+
+public class RoomPanel extends JPanel implements ActionListener {
+
+// Components
+private JTextField roomNumberTxt = new JTextField();
+private JTextField roomTypeTxt = new JTextField();
+private JTextField priceTxt = new JTextField();
+private JTextField statusTxt = new JTextField();
+
+// Buttons
+private JButton addBtn = new JButton("ADD ROOM");
+private JButton loadBtn = new JButton("LOAD ROOMS");
+private JButton updateBtn = new JButton("UPDATE ROOM");
+private JButton deleteBtn = new JButton("REMOVE ROOM");
+private JButton selectBtn = new JButton("SELECT ROOM BY NUMBER");
+
+// Table
+private JTable table;
+private DefaultTableModel model;
+
+public RoomPanel() {
+    setLayout(null);
+
+    // Table model
+    String[] columns = {"Room Number", "Room Type", "Price Per Night", "Status"};
+    model = new DefaultTableModel(columns, 0);
+    table = new JTable(model);
+    JScrollPane sp = new JScrollPane(table);
+    sp.setBounds(20, 250, 700, 200);
+
+    // Add fields
+    int y = 20;
+    addField("Room Number", roomNumberTxt, y); y += 30;
+    addField("Room Type", roomTypeTxt, y); y += 30;
+    addField("Price", priceTxt, y); y += 30;
+    addField("Status", statusTxt, y); y += 40;
+
+    // Add buttons
+    addButtons();
+
+    add(sp);
+}
+
+private void addField(String label, JComponent field, int y) {
+    JLabel lbl = new JLabel(label);
+    lbl.setBounds(20, y, 120, 25);
+    field.setBounds(150, y, 150, 25);
+    add(lbl);
+    add(field);
+}
+
+private void addButtons() {
+    addBtn.setBounds(320, 20, 150, 25);
+    updateBtn.setBounds(320, 60, 150, 25);
+    deleteBtn.setBounds(320, 100, 150, 25);
+    loadBtn.setBounds(320, 140, 150, 25);
+    selectBtn.setBounds(20, 200, 450, 25);
+
+    add(addBtn); add(updateBtn); add(deleteBtn); add(loadBtn); add(selectBtn);
+
+    addBtn.addActionListener(this);
+    updateBtn.addActionListener(this);
+    deleteBtn.addActionListener(this);
+    loadBtn.addActionListener(this);
+    selectBtn.addActionListener(this);
+}
+
+@Override
+public void actionPerformed(ActionEvent e) {
+    try (Connection con = database_connection.getConnection()) {
+        if (con == null) {
+            JOptionPane.showMessageDialog(this, "Database connection failed!");
+            return;
+        }
+
+        if (e.getSource() == addBtn) {
+            String sql = "INSERT INTO room(room_number, room_type, price_per_night, status) VALUES(?,?,?,?)";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, roomNumberTxt.getText());
+                ps.setString(2, roomTypeTxt.getText());
+                ps.setBigDecimal(3, new java.math.BigDecimal(priceTxt.getText()));
+                ps.setString(4, statusTxt.getText());
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Room added successfully!");
+            }
+        } else if (e.getSource() == updateBtn) {
+            String sql = "UPDATE room SET room_type=?, price_per_night=?, status=? WHERE room_number=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, roomTypeTxt.getText());
+                ps.setBigDecimal(2, new java.math.BigDecimal(priceTxt.getText()));
+                ps.setString(3, statusTxt.getText());
+                ps.setString(4, roomNumberTxt.getText());
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Room updated successfully!");
+            }
+        } else if (e.getSource() == deleteBtn) {
+            String sql = "DELETE FROM room WHERE room_number=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, roomNumberTxt.getText());
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Room deleted successfully!");
+            }
+        } else if (e.getSource() == loadBtn) {
+            model.setRowCount(0);
+            String sql = "SELECT * FROM room";
+            try (ResultSet rs = con.createStatement().executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                            rs.getString("room_number"),
+                            rs.getString("room_type"),
+                            rs.getBigDecimal("price_per_night"),
+                            rs.getString("status")
+                    });
+                }
+            }
+        } else if (e.getSource() == selectBtn) {
+            model.setRowCount(0);
+            String sql = "SELECT * FROM room WHERE room_number=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, roomNumberTxt.getText());
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                                rs.getString("room_number"),
+                                rs.getString("room_type"),
+                                rs.getBigDecimal("price_per_night"),
+                                rs.getString("status")
+                        });
+                    }
+                }
+            }
+        }
+
+    } catch (Exception ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+    }
+}
+
+// ✅ Main method included here
+public static void main(String[] args) {
+    SwingUtilities.invokeLater(new Runnable() {
+        public void run() {
+            JFrame f = new JFrame("Room Management");
+            f.setSize(800, 500);
+            f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+            f.add(new RoomPanel());
+            f.setVisible(true);
+        }
+    });
+}
+
+}  
 
