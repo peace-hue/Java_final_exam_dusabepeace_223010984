@@ -1,1 +1,203 @@
+package hospitality;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.event.*;
+import java.sql.*;
+
+public class InvoicePanel extends JPanel implements ActionListener {
+
+    // Components
+    private JTextField invoiceIdTxt = new JTextField();
+    private JTextField reservationIdTxt = new JTextField();
+    private JTextField invoiceDateTxt = new JTextField();
+    private JTextField totalAmountTxt = new JTextField();
+    private JTextField paymentStatusTxt = new JTextField();
+    private JTextField staffIdTxt = new JTextField();
+
+    // Buttons
+    private JButton addBtn = new JButton("ADD INVOICE");
+    private JButton loadBtn = new JButton("LOAD INVOICES");
+    private JButton updateBtn = new JButton("UPDATE INVOICE");
+    private JButton deleteBtn = new JButton("REMOVE INVOICE");
+    private JButton selectBtn = new JButton("SELECT BY INVOICE ID");
+
+    // Table
+    private JTable table;
+    private DefaultTableModel model;
+
+    public InvoicePanel() {
+        setLayout(null);
+
+        // Table model
+        String[] columns = {"Invoice ID", "Reservation ID", "Invoice Date", "Total Amount", "Payment Status", "Staff ID"};
+        model = new DefaultTableModel(columns, 0);
+        table = new JTable(model);
+        JScrollPane sp = new JScrollPane(table);
+        sp.setBounds(20, 300, 750, 200);
+
+        // Add fields
+        int y = 20;
+        addField("Invoice ID", invoiceIdTxt, y); y += 30;
+        addField("Reservation ID", reservationIdTxt, y); y += 30;
+        addField("Invoice Date (yyyy-mm-dd)", invoiceDateTxt, y); y += 30;
+        addField("Total Amount", totalAmountTxt, y); y += 30;
+        addField("Payment Status", paymentStatusTxt, y); y += 30;
+        addField("Staff ID", staffIdTxt, y); y += 40;
+
+        // Add buttons
+        addButtons();
+
+        add(sp);
+    }
+
+    private void addField(String label, JComponent field, int y) {
+        JLabel lbl = new JLabel(label);
+        lbl.setBounds(20, y, 180, 25);
+        field.setBounds(200, y, 150, 25);
+        add(lbl);
+        add(field);
+    }
+
+    private void addButtons() {
+        addBtn.setBounds(400, 20, 180, 25);
+        updateBtn.setBounds(400, 60, 180, 25);
+        deleteBtn.setBounds(400, 100, 180, 25);
+        loadBtn.setBounds(400, 140, 180, 25);
+        selectBtn.setBounds(20, 260, 350, 25);
+
+        add(addBtn);
+        add(updateBtn);
+        add(deleteBtn);
+        add(loadBtn);
+        add(selectBtn);
+
+        addBtn.addActionListener(this);
+        updateBtn.addActionListener(this);
+        deleteBtn.addActionListener(this);
+        loadBtn.addActionListener(this);
+        selectBtn.addActionListener(this);
+    }
+
+    @Override
+    public void actionPerformed(ActionEvent e) {
+        try (Connection con = database_connection.getConnection()) {
+            if (con == null) {
+                JOptionPane.showMessageDialog(this, "Database connection failed!");
+                return;
+            }
+
+            // Validate input before running any SQL
+            if (e.getSource() == addBtn || e.getSource() == updateBtn) {
+                if (invoiceIdTxt.getText().trim().isEmpty() ||
+                    reservationIdTxt.getText().trim().isEmpty() ||
+                    invoiceDateTxt.getText().trim().isEmpty() ||
+                    totalAmountTxt.getText().trim().isEmpty() ||
+                    paymentStatusTxt.getText().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Please fill in all required fields!");
+                    return;
+                }
+            }
+
+            if (e.getSource() == addBtn) {
+                String sql = "INSERT INTO invoice(invoice_id, reservation_id, invoice_date, total_amount, payment_status, staff_id) VALUES(?,?,?,?,?,?)";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, Integer.parseInt(invoiceIdTxt.getText()));
+                    ps.setInt(2, Integer.parseInt(reservationIdTxt.getText()));
+                    ps.setDate(3, java.sql.Date.valueOf(invoiceDateTxt.getText()));
+                    ps.setBigDecimal(4, new java.math.BigDecimal(totalAmountTxt.getText()));
+                    ps.setString(5, paymentStatusTxt.getText());
+                    if (staffIdTxt.getText().isEmpty()) {
+                        ps.setNull(6, java.sql.Types.INTEGER);
+                    } else {
+                        ps.setInt(6, Integer.parseInt(staffIdTxt.getText()));
+                    }
+                    ps.executeUpdate();
+                    JOptionPane.showMessageDialog(this, "✅ Invoice added successfully!");
+                }
+
+            } else if (e.getSource() == updateBtn) {
+                String sql = "UPDATE invoice SET reservation_id=?, invoice_date=?, total_amount=?, payment_status=?, staff_id=? WHERE invoice_id=?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, Integer.parseInt(reservationIdTxt.getText()));
+                    ps.setDate(2, java.sql.Date.valueOf(invoiceDateTxt.getText()));
+                    ps.setBigDecimal(3, new java.math.BigDecimal(totalAmountTxt.getText()));
+                    ps.setString(4, paymentStatusTxt.getText());
+                    if (staffIdTxt.getText().isEmpty()) {
+                        ps.setNull(5, java.sql.Types.INTEGER);
+                    } else {
+                        ps.setInt(5, Integer.parseInt(staffIdTxt.getText()));
+                    }
+                    ps.setInt(6, Integer.parseInt(invoiceIdTxt.getText()));
+                    ps.executeUpdate();
+                    JOptionPane.showMessageDialog(this, "✅ Invoice updated successfully!");
+                }
+
+            } else if (e.getSource() == deleteBtn) {
+                if (invoiceIdTxt.getText().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Please enter Invoice ID to delete.");
+                    return;
+                }
+                String sql = "DELETE FROM invoice WHERE invoice_id=?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, Integer.parseInt(invoiceIdTxt.getText()));
+                    ps.executeUpdate();
+                    JOptionPane.showMessageDialog(this, "🗑️ Invoice deleted successfully!");
+                }
+
+            } else if (e.getSource() == loadBtn) {
+                model.setRowCount(0);
+                String sql = "SELECT * FROM invoice";
+                try (ResultSet rs = con.createStatement().executeQuery(sql)) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                                rs.getInt("invoice_id"),
+                                rs.getInt("reservation_id"),
+                                rs.getDate("invoice_date"),
+                                rs.getBigDecimal("total_amount"),
+                                rs.getString("payment_status"),
+                                rs.getInt("staff_id")
+                        });
+                    }
+                }
+
+            } else if (e.getSource() == selectBtn) {
+                if (invoiceIdTxt.getText().trim().isEmpty()) {
+                    JOptionPane.showMessageDialog(this, "Enter an Invoice ID to search.");
+                    return;
+                }
+                model.setRowCount(0);
+                String sql = "SELECT * FROM invoice WHERE invoice_id=?";
+                try (PreparedStatement ps = con.prepareStatement(sql)) {
+                    ps.setInt(1, Integer.parseInt(invoiceIdTxt.getText()));
+                    try (ResultSet rs = ps.executeQuery()) {
+                        while (rs.next()) {
+                            model.addRow(new Object[]{
+                                    rs.getInt("invoice_id"),
+                                    rs.getInt("reservation_id"),
+                                    rs.getDate("invoice_date"),
+                                    rs.getBigDecimal("total_amount"),
+                                    rs.getString("payment_status"),
+                                    rs.getInt("staff_id")
+                            });
+                        }
+                    }
+                }
+            }
+
+        } catch (Exception ex) {
+            ex.printStackTrace();
+            JOptionPane.showMessageDialog(this, "❌ Error: " + ex.getMessage());
+        }
+    }
+
+    // Test frame
+    public static void main(String[] args) {
+        JFrame f = new JFrame("Invoice Management");
+        f.setSize(800, 550);
+        f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        f.add(new InvoicePanel());
+        f.setVisible(true);
+    }
+}
 
