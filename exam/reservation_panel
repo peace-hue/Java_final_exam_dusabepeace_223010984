@@ -1,1 +1,173 @@
+package hospitality;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.event.*;
+import java.sql.*;
+import java.text.SimpleDateFormat;
+
+public class ReservationPanel extends JPanel implements ActionListener {
+
+
+// Components
+private JTextField reservationIdTxt = new JTextField();
+private JTextField guestIdTxt = new JTextField();
+private JTextField roomNumberTxt = new JTextField();
+private JTextField checkInTxt = new JTextField();
+private JTextField checkOutTxt = new JTextField();
+private JTextField totalCostTxt = new JTextField();
+
+// Buttons
+private JButton addBtn = new JButton("ADD RESERVATION");
+private JButton loadBtn = new JButton("LOAD RESERVATIONS");
+private JButton updateBtn = new JButton("UPDATE RESERVATION");
+private JButton deleteBtn = new JButton("REMOVE RESERVATION");
+private JButton selectBtn = new JButton("SELECT BY RESERVATION ID");
+
+// Table
+private JTable table;
+private DefaultTableModel model;
+
+public ReservationPanel() {
+    setLayout(null);
+
+    // Table model
+    String[] columns = {"Reservation ID", "Guest ID", "Room Number", "Check-in", "Check-out", "Total Cost"};
+    model = new DefaultTableModel(columns, 0);
+    table = new JTable(model);
+    JScrollPane sp = new JScrollPane(table);
+    sp.setBounds(20, 300, 750, 200);
+
+    // Add fields
+    int y = 20;
+    addField("Reservation ID", reservationIdTxt, y); y += 30;
+    addField("Guest ID", guestIdTxt, y); y += 30;
+    addField("Room Number", roomNumberTxt, y); y += 30;
+    addField("Check-in Date (yyyy-mm-dd)", checkInTxt, y); y += 30;
+    addField("Check-out Date (yyyy-mm-dd)", checkOutTxt, y); y += 30;
+    addField("Total Cost", totalCostTxt, y); y += 40;
+
+    // Add buttons
+    addButtons();
+
+    add(sp);
+}
+
+private void addField(String label, JComponent field, int y) {
+    JLabel lbl = new JLabel(label);
+    lbl.setBounds(20, y, 180, 25);
+    field.setBounds(200, y, 150, 25);
+    add(lbl);
+    add(field);
+}
+
+private void addButtons() {
+    addBtn.setBounds(400, 20, 180, 25);
+    updateBtn.setBounds(400, 60, 180, 25);
+    deleteBtn.setBounds(400, 100, 180, 25);
+    loadBtn.setBounds(400, 140, 180, 25);
+    selectBtn.setBounds(20, 260, 350, 25);
+
+    add(addBtn); add(updateBtn); add(deleteBtn); add(loadBtn); add(selectBtn);
+
+    addBtn.addActionListener(this);
+    updateBtn.addActionListener(this);
+    deleteBtn.addActionListener(this);
+    loadBtn.addActionListener(this);
+    selectBtn.addActionListener(this);
+}
+
+@Override
+public void actionPerformed(ActionEvent e) {
+    try (Connection con = database_connection.getConnection()) {
+        if (con == null) {
+            JOptionPane.showMessageDialog(this, "Database connection failed!");
+            return;
+        }
+
+        SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd");
+
+        if (e.getSource() == addBtn) {
+            String sql = "INSERT INTO reservation(reservation_id, guest_id, room_number, check_in_date, check_out_date, total_cost) VALUES(?,?,?,?,?,?)";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Integer.parseInt(reservationIdTxt.getText()));
+                ps.setInt(2, Integer.parseInt(guestIdTxt.getText()));
+                ps.setString(3, roomNumberTxt.getText());
+                ps.setDate(4, java.sql.Date.valueOf(checkInTxt.getText()));
+                ps.setDate(5, java.sql.Date.valueOf(checkOutTxt.getText()));
+                ps.setBigDecimal(6, new java.math.BigDecimal(totalCostTxt.getText()));
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Reservation added successfully!");
+            }
+        } else if (e.getSource() == updateBtn) {
+            String sql = "UPDATE reservation SET guest_id=?, room_number=?, check_in_date=?, check_out_date=?, total_cost=? WHERE reservation_id=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Integer.parseInt(guestIdTxt.getText()));
+                ps.setString(2, roomNumberTxt.getText());
+                ps.setDate(3, java.sql.Date.valueOf(checkInTxt.getText()));
+                ps.setDate(4, java.sql.Date.valueOf(checkOutTxt.getText()));
+                ps.setBigDecimal(5, new java.math.BigDecimal(totalCostTxt.getText()));
+                ps.setInt(6, Integer.parseInt(reservationIdTxt.getText()));
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Reservation updated successfully!");
+            }
+        } else if (e.getSource() == deleteBtn) {
+            String sql = "DELETE FROM reservation WHERE reservation_id=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Integer.parseInt(reservationIdTxt.getText()));
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Reservation deleted successfully!");
+            }
+        } else if (e.getSource() == loadBtn) {
+            model.setRowCount(0);
+            String sql = "SELECT * FROM reservation";
+            try (ResultSet rs = con.createStatement().executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                            rs.getInt("reservation_id"),
+                            rs.getInt("guest_id"),
+                            rs.getString("room_number"),
+                            rs.getDate("check_in_date"),
+                            rs.getDate("check_out_date"),
+                            rs.getBigDecimal("total_cost")
+                    });
+                }
+            }
+        } else if (e.getSource() == selectBtn) {
+            model.setRowCount(0);
+            String sql = "SELECT * FROM reservation WHERE reservation_id=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Integer.parseInt(reservationIdTxt.getText()));
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                                rs.getInt("reservation_id"),
+                                rs.getInt("guest_id"),
+                                rs.getString("room_number"),
+                                rs.getDate("check_in_date"),
+                                rs.getDate("check_out_date"),
+                                rs.getBigDecimal("total_cost")
+                        });
+                    }
+                }
+            }
+        }
+
+    } catch (Exception ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+    }
+}
+
+// Test frame
+public static void main(String[] args) {
+    JFrame f = new JFrame("Reservation Management");
+    f.setSize(800, 550);
+    f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    f.add(new ReservationPanel());
+    f.setVisible(true);
+}
+
+
+}
 
