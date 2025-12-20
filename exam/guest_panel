@@ -1,1 +1,170 @@
+package hospitality;
+
+import javax.swing.*;
+import javax.swing.table.DefaultTableModel;
+import java.awt.event.*;
+import java.sql.*;
+
+public class GuestPanel extends JPanel implements ActionListener {
+
+
+// Components
+private JTextField idTxt = new JTextField();
+private JTextField firstNameTxt = new JTextField();
+private JTextField lastNameTxt = new JTextField();
+private JTextField emailTxt = new JTextField();
+private JTextField phoneTxt = new JTextField();
+private JTextField addressTxt = new JTextField();
+
+// Buttons
+private JButton addBtn = new JButton("ADD GUEST");
+private JButton loadBtn = new JButton("LOAD GUESTS");
+private JButton updateBtn = new JButton("UPDATE GUEST");
+private JButton deleteBtn = new JButton("REMOVE GUEST");
+private JButton selectBtn = new JButton("SELECT GUEST BY ID");
+
+// Table
+private JTable table;
+private DefaultTableModel model;
+
+public GuestPanel() {
+    setLayout(null);
+
+    // Table model
+    String[] columns = {"Guest ID", "First Name", "Last Name", "Email", "Phone", "Address"};
+    model = new DefaultTableModel(columns, 0);
+    table = new JTable(model);
+    JScrollPane sp = new JScrollPane(table);
+    sp.setBounds(20, 300, 700, 200);
+
+    // Add fields
+    int y = 20;
+    addField("Guest ID", idTxt, y); y += 30;
+    addField("First Name", firstNameTxt, y); y += 30;
+    addField("Last Name", lastNameTxt, y); y += 30;
+    addField("Email", emailTxt, y); y += 30;
+    addField("Phone", phoneTxt, y); y += 30;
+    addField("Address", addressTxt, y); y += 40;
+
+    // Add buttons
+    addButtons();
+
+    add(sp);
+}
+
+private void addField(String label, JComponent field, int y) {
+    JLabel lbl = new JLabel(label);
+    lbl.setBounds(20, y, 100, 25);
+    field.setBounds(130, y, 150, 25);
+    add(lbl);
+    add(field);
+}
+
+private void addButtons() {
+    addBtn.setBounds(300, 20, 150, 25);
+    updateBtn.setBounds(300, 60, 150, 25);
+    deleteBtn.setBounds(300, 100, 150, 25);
+    loadBtn.setBounds(300, 140, 150, 25);
+    selectBtn.setBounds(20, 260, 430, 25);
+
+    add(addBtn); add(updateBtn); add(deleteBtn); add(loadBtn); add(selectBtn);
+
+    addBtn.addActionListener(this);
+    updateBtn.addActionListener(this);
+    deleteBtn.addActionListener(this);
+    loadBtn.addActionListener(this);
+    selectBtn.addActionListener(this);
+}
+
+@Override
+public void actionPerformed(ActionEvent e) {
+    try (Connection con = database_connection.getConnection()) {
+        if (con == null) {
+            JOptionPane.showMessageDialog(this, "Database connection failed!");
+            return;
+        }
+
+        if (e.getSource() == addBtn) {
+            String sql = "INSERT INTO guests(guest_id, first_name, last_name, email, phone_number, address) VALUES(?,?,?,?,?,?)";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Integer.parseInt(idTxt.getText()));
+                ps.setString(2, firstNameTxt.getText());
+                ps.setString(3, lastNameTxt.getText());
+                ps.setString(4, emailTxt.getText());
+                ps.setString(5, phoneTxt.getText());
+                ps.setString(6, addressTxt.getText());
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Guest added successfully!");
+            }
+        } else if (e.getSource() == updateBtn) {
+            String sql = "UPDATE guests SET first_name=?, last_name=?, email=?, phone_number=?, address=? WHERE guest_id=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setString(1, firstNameTxt.getText());
+                ps.setString(2, lastNameTxt.getText());
+                ps.setString(3, emailTxt.getText());
+                ps.setString(4, phoneTxt.getText());
+                ps.setString(5, addressTxt.getText());
+                ps.setInt(6, Integer.parseInt(idTxt.getText()));
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Guest updated successfully!");
+            }
+        } else if (e.getSource() == deleteBtn) {
+            String sql = "DELETE FROM guests WHERE guest_id=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Integer.parseInt(idTxt.getText()));
+                ps.executeUpdate();
+                JOptionPane.showMessageDialog(this, "Guest deleted successfully!");
+            }
+        } else if (e.getSource() == loadBtn) {
+            model.setRowCount(0);
+            String sql = "SELECT * FROM guests";
+            try (ResultSet rs = con.createStatement().executeQuery(sql)) {
+                while (rs.next()) {
+                    model.addRow(new Object[]{
+                            rs.getInt("guest_id"),
+                            rs.getString("first_name"),
+                            rs.getString("last_name"),
+                            rs.getString("email"),
+                            rs.getString("phone_number"),
+                            rs.getString("address")
+                    });
+                }
+            }
+        } else if (e.getSource() == selectBtn) {
+            model.setRowCount(0);
+            String sql = "SELECT * FROM guests WHERE guest_id=?";
+            try (PreparedStatement ps = con.prepareStatement(sql)) {
+                ps.setInt(1, Integer.parseInt(idTxt.getText()));
+                try (ResultSet rs = ps.executeQuery()) {
+                    while (rs.next()) {
+                        model.addRow(new Object[]{
+                                rs.getInt("guest_id"),
+                                rs.getString("first_name"),
+                                rs.getString("last_name"),
+                                rs.getString("email"),
+                                rs.getString("phone_number"),
+                                rs.getString("address")
+                        });
+                    }
+                }
+            }
+        }
+
+    } catch (Exception ex) {
+        ex.printStackTrace();
+        JOptionPane.showMessageDialog(this, "Error: " + ex.getMessage());
+    }
+}
+
+// Test frame
+public static void main(String[] args) {
+    JFrame f = new JFrame("Guests Management");
+    f.setSize(800, 550);
+    f.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+    f.add(new GuestPanel());
+    f.setVisible(true);
+}
+
+
+}
 
