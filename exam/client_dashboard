@@ -1,1 +1,16 @@
+package hospitality;
+
+import javax.swing.*;
+
+public class ClientDashboard extends JFrame {
+
+    public ClientDashboard() {
+        setTitle("Client Dashboard");
+        setSize(300, 200);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        add(new JLabel("Welcome Client – View Services", JLabel.CENTER));
+    }
+}
 
