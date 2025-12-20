@@ -1,1 +1,16 @@
+package hospitality;
+
+import javax.swing.*;
+
+public class AdminDashboard extends JFrame {
+
+    public AdminDashboard() {
+        setTitle("Admin Dashboard");
+        setSize(300, 200);
+        setLocationRelativeTo(null);
+        setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+
+        add(new JLabel("Welcome Admin – Full Access", JLabel.CENTER));
+    }
+}
 
